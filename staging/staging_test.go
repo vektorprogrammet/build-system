@@ -3,7 +3,7 @@ package staging
 import (
 	"testing"
 
-	"github.com/kristandre/BuildSystem/nginx"
+	"github.com/vektorprogrammet/build-system/nginx"
 )
 
 var config = nginx.Config{
