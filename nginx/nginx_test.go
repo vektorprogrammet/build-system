@@ -30,6 +30,7 @@ server {
 	# Browser caching
 	location ~*  \.(jpg|jpeg|png|gif|ico|woff)$ {
 		expires 365d;
+		try_files $uri /app.php$is_args$args;
 	}
 
 	location ~*  \.(css|js)$ {
