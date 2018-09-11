@@ -2,112 +2,178 @@ package staging
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
 
-	"bytes"
-
-	"io/ioutil"
-	"os"
-
-	"golang.org/x/crypto/ssh"
+	"github.com/vektorprogrammet/build-system/nginx"
 )
 
-type environmentError struct {
-	s string
+type Server struct {
+	Repo string
+	Branch string
+	RootFolder string
+	Domain string
 }
 
-func (e *environmentError) Error() string {
-	return "Environment error: " + e.s
-}
-
-func UploadNginxConfig(configContent, serverName string) error {
-	createNginxConfig := fmt.Sprintf("echo '%s' > /srv/nginx/%s", configContent, serverName)
-
-	_, err := remoteRun(createNginxConfig)
-	if err != nil {
+func (s *Server) Deploy() error {
+	if err := s.createServerFolder(); err != nil {
 		return err
 	}
 
-	_, err = remoteRun("sudo service nginx restart")
-	return err
-}
-
-func SecureDomainWithSsl(domain string) error {
-	_, err := remoteRun(fmt.Sprintf("printf '2\n' | sudo certbot --nginx -d %s", domain))
-	return err
-}
-
-func CopyBaseWebsiteTo(targetDir string) error {
-	cacheDir := "/var/www/" + targetDir + "/app/cache"
-	logsDir := "/var/www/" + targetDir + "/app/logs"
-	imageDir := "/var/www/" + targetDir + "/www/images"
-	signatureDir := "/var/www/" + targetDir + "/signatures"
-
-	copyFiles := fmt.Sprintf("cp -R /var/www/vektorprogrammet '/var/www/%s'", targetDir)
-	_, err := remoteRun(copyFiles)
-	if err != nil {
+	if err := s.clone(); err != nil {
 		return err
 	}
+
+	if err := s.checkout(); err != nil {
+		return err
+	}
+
+	if err := s.install(); err != nil {
+		return err
+	}
+
+	if err := s.setFolderPermissions(); err != nil {
+		return err
+	}
+
+	if err := s.createNginxConfig(); err != nil {
+		return err
+	}
+
+	if err := s.secureWithHttps(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) Update() error {
+	if err := s.clone(); err != nil {
+		return err
+	}
+
+	return s.setFolderPermissions()
+}
+
+func (s *Server) createServerFolder() error {
+	return s.runCommand("mkdir -p " + s.folder())
+}
+
+func (s *Server) clone() error {
+	return s.runCommand(fmt.Sprintf("git clone %s .", s.Repo))
+}
+
+func (s *Server) checkout() error {
+	return s.runCommand(fmt.Sprintf("git checkout %s", s.Branch))
+}
+
+func (s *Server) setFolderPermissions() error {
+	cacheDir := s.folder() + "/app/cache"
+	logsDir := s.folder() + "/app/logs"
+	imageDir := s.folder() + "/www/images"
+	signatureDir := s.folder() + "/signatures"
 
 	updateWebServerPermissions := fmt.Sprintf("setfacl -R -m u:www-data:rwX %s %s %s %s", cacheDir, logsDir, imageDir, signatureDir)
-	_, err = remoteRun(updateWebServerPermissions)
-	return err
+	err := s.runCommand(updateWebServerPermissions)
+	if err != nil {
+		return err
+	}
 
 	updateDefaultWebServerPermissions := fmt.Sprintf("setfacl -dR -m u:www-data:rwX %s %s %s %s", cacheDir, logsDir, imageDir, signatureDir)
-	_, err = remoteRun(updateDefaultWebServerPermissions)
-	return err
+	return s.runCommand(updateDefaultWebServerPermissions)
 }
 
-func remoteRun(cmd string) (string, error) {
-	user := os.Getenv("VEKTOR_STAGING_USER")
-	if len(user) == 0 {
-		return "", &environmentError{s: "VEKTOR_STAGING_USER not set"}
+func (s *Server) createNginxConfig() error {
+	nginxConfig := nginx.Config{
+		Root: s.folder() + "/www",
+		ServerName: s.serverName(),
 	}
 
-	addr := os.Getenv("VEKTOR_STAGING_ADDR")
-	if len(user) == 0 {
-		return "", &environmentError{s: "VEKTOR_STAGING_ADDR not set"}
+	return s.runCommand(fmt.Sprintf("echo '%s' > /srv/nginx/%s", nginxConfig.String(), nginxConfig.ServerName))
+}
+
+func (s *Server) restartNginx() error {
+	return s.runCommand(fmt.Sprintf("sudo service nginx restart"))
+}
+
+func (s *Server) secureWithHttps() error {
+	return s.runCommand(fmt.Sprintf("printf '2\n' | sudo certbot --nginx -d %s", s.serverName()))
+}
+
+func (s *Server) folder() string {
+	return s.RootFolder + "/" + s.Branch
+}
+
+func (s *Server) serverName() string {
+	return strings.Replace(s.Branch, "_", "-", -1) + "." + s.Domain
+}
+
+func (s *Server) install() error {
+	commands := []string{
+		"SYMFONY_ENV=prod php ./composer.phar install -n --no-dev --optimize-autoloader",
+		"npm install",
+		"npm run build:prod",
+		"npm run setup:scheduling",
+		"npm run build:scheduling",
+		"php app/console doctrine:database:create --env=prod",
+		"php app/console doctrine:schema:create --env=prod",
+		"php app/console doctrine:fixtures:load -n",
+		"php app/console cache:clear --env=prod",
 	}
 
-	privateKey := os.Getenv("PRIVATE_KEY")
-	if len(user) == 0 {
-		return "", &environmentError{s: "PRIVATE_KEY not set"}
+	return s.runCommands(commands)
+}
+
+func (s *Server) createParametersFile() error {
+	if err := s.runCommand("cp ../parameters.yml app/config/parameters.yml"); err != nil{
+		return err
 	}
 
-	fp, err := os.Open(privateKey)
+	return s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.Branch))
+}
+
+func (s *Server) dropDatabase() error {
+	return s.runCommand("php app/console doctrine:database:drop --force")
+}
+
+func (s *Server) remove() error {
+	defer s.runCommand("rm -rf " + s.folder())
+
+	if err := s.dropDatabase(); err != nil{
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) runCommand(cmd string) error {
+	c := exec.Command("sh", "-c", cmd)
+	c.Dir = s.folder()
+	output, err := c.Output()
 	if err != nil {
-		return "", err
-	}
-	defer fp.Close()
-
-	buf, _ := ioutil.ReadAll(fp)
-	key, err := ssh.ParsePrivateKey(buf)
-	if err != nil {
-		return "", err
+		return err
 	}
 
-	// Authentication
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(key),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //TODO: Replace with fixed host key
-	}
-	// Connect
-	client, err := ssh.Dial("tcp", addr+":22", config)
-	if err != nil {
-		return "", err
-	}
-	// Create a session. It is one session per command.
-	session, err := client.NewSession()
-	if err != nil {
-		return "", err
-	}
-	defer session.Close()
+	fmt.Println(s.folder())
+	fmt.Println(cmd)
+	fmt.Println(fmt.Sprintf("%s", output))
 
-	var b bytes.Buffer
-	session.Stdout = &b // get output
+	return nil
+}
 
-	err = session.Run(cmd)
-	return b.String(), err
+func (s *Server) runCommands(cmds []string) error {
+	for _, cmd := range cmds {
+		c := exec.Command("sh", "-c", cmd)
+		c.Dir = s.folder()
+		output, err := c.Output()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(s.folder())
+		fmt.Println(cmd)
+		fmt.Println(fmt.Sprintf("%s", output))
+	}
+
+	return nil
 }
