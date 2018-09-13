@@ -1,2 +1,4 @@
 main
 staging-server
+build-system
+vendor/
