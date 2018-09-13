@@ -198,12 +198,12 @@ func (s *Server) dropDatabase() error {
 	return s.runCommand("php app/console doctrine:database:drop --force")
 }
 
-func (s *Server) remove() error {
+func (s *Server) Remove() error {
 	if len(s.folder()) > len(s.RootFolder) + 1 {
 		defer s.runCommand("rm -rf " + s.folder())
 	}
 	if len(s.ServerName()) > 0 {
-		defer s.runCommand("rm /srv/nginx/" + s.ServerName())
+		defer s.runCommands([]string{"rm /srv/nginx/" + s.ServerName(), "sudo service nginx restart"})
 		defer s.runCommand("sudo certbot delete --cert-name " + s.ServerName())
 	}
 

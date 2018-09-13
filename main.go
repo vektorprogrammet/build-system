@@ -95,9 +95,10 @@ func (g *githubCommenter) UpdateProgress(message string, progress int) {
 func startGitHubEventListener() {
 	eventChan = make(chan interface{})
 	go func() {
+		handler := WebhookHandler{}
 		for event := range eventChan {
-			handler := WebhookHandler{}
-			go handler.HandleEvent(event)
+			handler.HandlePullRequestEvent(event)
+			handler.HandleBranchDeleteEvent(event)
 		}
 	}()
 }
@@ -115,14 +116,41 @@ func main() {
 
 type WebhookHandler struct{}
 
-func (handler WebhookHandler) HandleEvent(event interface{}) {
+func (handler WebhookHandler) HandleBranchDeleteEvent(event interface{}) {
+	e, ok := event.(*github.DeleteEvent)
+	if !ok {
+		fmt.Println("Not a delete event")
+		return
+	}
+
+	if *e.RefType != "branch" {
+		fmt.Print("Not a branch")
+		return
+	}
+
+	server := staging.Server{
+		Branch:         *e.Ref,
+		Repo:           *e.Repo.CloneURL,
+		Domain:         "staging.vektorprogrammet.no",
+		RootFolder:     "/var/www",
+	}
+
+	if server.Exists() {
+		err := server.Remove()
+		if err != nil {
+			fmt.Println("Could not remove branch")
+		}
+	}
+}
+
+func (handler WebhookHandler) HandlePullRequestEvent(event interface{}) {
 	e, ok := event.(*github.PullRequestEvent)
 	if !ok {
 		fmt.Println("Not a pull request event")
 		return
 	}
 
-	if *e.Action != "opened" && *e.Action != "synchronize" {
+	if !(*e.Action == "opened" || *e.Action == "synchronize" || *e.Action == "reopened") {
 		return
 	}
 
