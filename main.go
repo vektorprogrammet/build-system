@@ -36,9 +36,9 @@ func (s *GitHubEventMonitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type githubCommenter struct {
-	accessToken string
-	progressCommentId int
-	prNumber int
+	accessToken       string
+	progressCommentId int64
+	prNumber          int
 }
 
 func (g *githubCommenter) createClient() (*github.Client, context.Context) {
@@ -51,7 +51,6 @@ func (g *githubCommenter) createClient() (*github.Client, context.Context) {
 
 	return github.NewClient(tc), ctx
 }
-
 
 func (g *githubCommenter) comment(comment string) (*github.IssueComment, error) {
 	client, ctx := g.createClient()
@@ -68,7 +67,7 @@ func (g *githubCommenter) comment(comment string) (*github.IssueComment, error) 
 	return issue, nil
 }
 
-func (g *githubCommenter) editComment(id int, comment string) (*github.IssueComment, error) {
+func (g *githubCommenter) editComment(id int64, comment string) (*github.IssueComment, error) {
 	client, ctx := g.createClient()
 
 	prComment := github.IssueComment{
@@ -114,7 +113,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":5555", nil))
 }
 
-type WebhookHandler struct {}
+type WebhookHandler struct{}
 
 func (handler WebhookHandler) HandleEvent(event interface{}) {
 	e, ok := event.(*github.PullRequestEvent)
@@ -144,6 +143,6 @@ func (handler WebhookHandler) HandleEvent(event interface{}) {
 	} else {
 		commenter.StartingDeploy()
 		server.Deploy()
-		commenter.editComment(commenter.progressCommentId, "Staging server deployed at https://" + server.ServerName())
+		commenter.editComment(commenter.progressCommentId, "Staging server deployed at https://"+server.ServerName())
 	}
 }
