@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/vektorprogrammet/build-system/cli"
 	"log"
 	"net/http"
+	"strings"
 
 	"os"
 
@@ -22,7 +24,7 @@ type GitHubEventMonitor struct {
 func (s *GitHubEventMonitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	payload, err := github.ValidatePayload(r, s.secret)
 	if err != nil {
-		fmt.Printf("Failed to valdidate payload: %s\n", err)
+		fmt.Printf("Failed to validate payload: %s\n", err)
 		return
 	}
 	event, err := github.ParseWebHook(github.WebHookType(r), payload)
@@ -99,11 +101,17 @@ func startGitHubEventListener() {
 		for event := range eventChan {
 			handler.HandlePullRequestEvent(event)
 			handler.HandleBranchDeleteEvent(event)
+			handler.HandlePushEvent(event)
 		}
 	}()
 }
 
 func main() {
+	keepRunning := cli.HandleArguments()
+	if !keepRunning {
+		return
+	}
+
 	startGitHubEventListener()
 	secret := os.Getenv("GITHUB_WEBHOOKS_SECRET")
 	fmt.Println("Secret: " + secret)
@@ -115,6 +123,30 @@ func main() {
 }
 
 type WebhookHandler struct{}
+
+func (handler WebhookHandler) HandlePushEvent(event interface{}) {
+	e, ok := event.(*github.PushEvent)
+	if !ok {
+		fmt.Println("Not a push event")
+		return
+	}
+
+	branch := strings.Split(e.GetRef(), "/")[2]
+	server := staging.Server{
+		Branch:     branch,
+		Repo:       *e.Repo.CloneURL,
+		Domain:     "staging.vektorprogrammet.no",
+		RootFolder: "/var/www",
+		UpdateProgress: func(message string, progress int) {
+			fmt.Printf("%s %d\n", message, progress)
+		},
+	}
+
+	if server.Exists() && server.CanBeFastForwarded() {
+		server.Update()
+		fmt.Printf("Staging server updated at https://" + server.ServerName())
+	}
+}
 
 func (handler WebhookHandler) HandleBranchDeleteEvent(event interface{}) {
 	e, ok := event.(*github.DeleteEvent)
@@ -129,10 +161,10 @@ func (handler WebhookHandler) HandleBranchDeleteEvent(event interface{}) {
 	}
 
 	server := staging.Server{
-		Branch:         *e.Ref,
-		Repo:           *e.Repo.CloneURL,
-		Domain:         "staging.vektorprogrammet.no",
-		RootFolder:     "/var/www",
+		Branch:     *e.Ref,
+		Repo:       *e.Repo.CloneURL,
+		Domain:     "staging.vektorprogrammet.no",
+		RootFolder: "/var/www",
 	}
 
 	if server.Exists() {
@@ -166,11 +198,21 @@ func (handler WebhookHandler) HandlePullRequestEvent(event interface{}) {
 	}
 
 	if server.Exists() {
-		server.Update()
-		commenter.comment("Staging server updated at https://" + server.ServerName())
+		if server.CanBeFastForwarded() {
+			server.Update()
+			commenter.comment("Staging server updated at https://" + server.ServerName())
+		} else {
+			commenter.comment("Staging server already up to date at https://" + server.ServerName())
+		}
 	} else {
 		commenter.StartingDeploy()
-		server.Deploy()
-		commenter.editComment(commenter.progressCommentId, "Staging server deployed at https://"+server.ServerName())
+		err := server.Deploy()
+		if err != nil {
+			fmt.Printf("Could not create staging server: %s\n", err)
+			commenter.editComment(commenter.progressCommentId, "Could not deploy staging server because of an error")
+			server.Remove()
+		} else {
+			commenter.editComment(commenter.progressCommentId, "Staging server deployed at https://"+server.ServerName())
+		}
 	}
 }
