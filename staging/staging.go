@@ -18,6 +18,26 @@ type Server struct {
 	UpdateProgress func(message string, progress int)
 }
 
+const DefaultRepo = "https://github.com/vektorprogrammet/vektorprogrammet"
+
+const DefaultRootFolder = "/var/www/servers"
+
+const DefaultDomain = "staging.vektorprogrammet.no"
+
+func NewServer(branch string, updateProgress func(message string, progress int)) Server {
+	s := Server{}
+	// Default values
+	s.Repo = DefaultRepo
+	s.RootFolder = DefaultRootFolder
+	s.Domain = DefaultDomain
+
+	// Initialize fields
+	s.Branch = branch
+	s.UpdateProgress = updateProgress
+
+	return s
+}
+
 func (s *Server) Deploy() error {
 	s.UpdateProgress("Creating server folder", 0)
 	if err := s.createServerFolder(); err != nil {
