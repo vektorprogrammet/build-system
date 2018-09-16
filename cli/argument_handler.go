@@ -20,13 +20,3 @@ func HandleArguments() (keepRunning bool) {
 	}
 	return true
 }
-
-func isFlag(arg string) bool {
-	flags := []string{"-d", "--delete"}
-	for i := 0; i < len(flags); i++ {
-		if arg == flags[i] {
-			return true
-		}
-	}
-	return false
-}
