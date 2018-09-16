@@ -8,7 +8,7 @@ import (
 )
 
 func ListServers() []staging.Server {
-	dirs, err := ListDirContents(staging.GetDefaultRootFolder())
+	dirs, err := ListDirContents(staging.DefaultRootFolder)
 	if err != nil {
 		fmt.Println(err)
 		return nil

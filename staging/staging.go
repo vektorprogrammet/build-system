@@ -18,24 +18,18 @@ type Server struct {
 	UpdateProgress func(message string, progress int)
 }
 
-func GetDefaultRepo() string {
-	return "https://github.com/vektorprogrammet/vektorprogrammet"
-}
+const DefaultRepo = "https://github.com/vektorprogrammet/vektorprogrammet"
 
-func GetDefaultRootFolder() string {
-	return "/var/www/servers"
-}
+const DefaultRootFolder = "/var/www/servers"
 
-func GetDefaultDomain() string {
-	return "staging.vektorprogrammet.no"
-}
+const DefaultDomain = "staging.vektorprogrammet.no"
 
 func NewServer(branch string, updateProgress func(message string, progress int)) Server {
 	s := Server{}
 	// Default values
-	s.Repo = GetDefaultRepo()
-	s.RootFolder = GetDefaultRootFolder()
-	s.Domain = GetDefaultDomain()
+	s.Repo = DefaultRepo
+	s.RootFolder = DefaultRootFolder
+	s.Domain = DefaultDomain
 
 	// Initialize fields
 	s.Branch = branch
