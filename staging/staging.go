@@ -24,6 +24,8 @@ const DefaultRootFolder = "/var/www/servers"
 
 const DefaultDomain = "staging.vektorprogrammet.no"
 
+const DefaultInstallationFolder = "/var/www/staging-server"
+
 func NewServer(branch string, updateProgress func(message string, progress int)) Server {
 	s := Server{}
 	// Default values
@@ -224,7 +226,8 @@ func (s *Server) updateDatabase() error {
 }
 
 func (s *Server) createParametersFile() error {
-	if err := s.runCommand("cp ../parameters.yml app/config/parameters.yml"); err != nil {
+	cmd := fmt.Sprintf("cp %s/parameters.yml app/config/parameters.yml", DefaultInstallationFolder)
+	if err := s.runCommand(cmd); err != nil {
 		return err
 	}
 

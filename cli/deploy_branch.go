@@ -32,7 +32,7 @@ func DeployBranch(branchName string) error {
 		err := server.Deploy()
 		if err != nil {
 			server.Remove()
-			fmt.Printf("Could not create stating server: %s\n", err)
+			fmt.Printf("Could not create staging server: %s\n", err)
 		} else {
 			fmt.Printf("Staging server deployed at https://%s\n", server.ServerName())
 		}
