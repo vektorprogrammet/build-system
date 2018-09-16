@@ -59,6 +59,10 @@ func (s *Server) Deploy() error {
 		return err
 	}
 
+	if err := s.createRobotsTxt(); err != nil {
+		return err
+	}
+
 	s.UpdateProgress("Installing composer and NPM dependencies", 30)
 	if err := s.install(); err != nil {
 		return err
@@ -161,6 +165,11 @@ func (s *Server) createNginxConfig() error {
 	}
 
 	return s.runCommand(fmt.Sprintf("echo '%s' > /srv/nginx/%s", nginxConfig.String(), nginxConfig.ServerName))
+}
+
+func (s *Server) createRobotsTxt() error {
+	robotContent := "User-agent: *\nDisallow: /"
+	return s.runCommand(fmt.Sprintf("echo '%s' > %s/www/robots.txt", robotContent, s.folder()))
 }
 
 func (s *Server) restartNginx() error {
