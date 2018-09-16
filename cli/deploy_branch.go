@@ -15,21 +15,9 @@ func DeployBranch(branchName string) error {
 		return err
 	}
 
-	repo, _, err := client.Repositories.Get(ctx, "vektorprogrammet", "vektorprogrammet")
-	if err != nil {
-		fmt.Printf("Could not find vektorprogrammet repo\n")
-		return err
-	}
-
-	server := staging.Server{
-		Branch:     branchName,
-		Repo:       *repo.CloneURL,
-		Domain:     "staging.vektorprogrammet.no",
-		RootFolder: "/var/www",
-		UpdateProgress: func(message string, progress int) {
-			fmt.Printf("%s %d\n", message, progress)
-		},
-	}
+	server := staging.NewServer(branchName, func(message string, progress int) {
+		fmt.Printf("%s %d\n", message, progress)
+	})
 
 	if server.Exists() {
 		fmt.Println("Server exists. Forcing update...")
@@ -61,21 +49,9 @@ func StopServer(branchName string) error {
 		return err
 	}
 
-	repo, _, err := client.Repositories.Get(ctx, "vektorprogrammet", "vektorprogrammet")
-	if err != nil {
-		fmt.Printf("Could not find vektorprogrammet repo\n")
-		return err
-	}
-
-	server := staging.Server{
-		Branch:     branchName,
-		Repo:       *repo.CloneURL,
-		Domain:     "staging.vektorprogrammet.no",
-		RootFolder: "/var/www",
-		UpdateProgress: func(message string, progress int) {
-			fmt.Printf("%s %d\n", message, progress)
-		},
-	}
+	server := staging.NewServer(branchName, func(message string, progress int) {
+		fmt.Printf("%s %d\n", message, progress)
+	})
 
 	if server.Exists() {
 		fmt.Printf("Stopping server hosting %s\n", branchName)

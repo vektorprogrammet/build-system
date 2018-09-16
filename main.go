@@ -132,15 +132,9 @@ func (handler WebhookHandler) HandlePushEvent(event interface{}) {
 	}
 
 	branch := strings.Split(e.GetRef(), "/")[2]
-	server := staging.Server{
-		Branch:     branch,
-		Repo:       *e.Repo.CloneURL,
-		Domain:     "staging.vektorprogrammet.no",
-		RootFolder: "/var/www",
-		UpdateProgress: func(message string, progress int) {
-			fmt.Printf("%s %d\n", message, progress)
-		},
-	}
+	server := staging.NewServer(branch, func(message string, progress int) {
+		fmt.Printf("%s %d\n", message, progress)
+	})
 
 	if server.Exists() && server.CanBeFastForwarded() {
 		server.Update()
@@ -160,12 +154,9 @@ func (handler WebhookHandler) HandleBranchDeleteEvent(event interface{}) {
 		return
 	}
 
-	server := staging.Server{
-		Branch:     *e.Ref,
-		Repo:       *e.Repo.CloneURL,
-		Domain:     "staging.vektorprogrammet.no",
-		RootFolder: "/var/www",
-	}
+	server := staging.NewServer(*e.Ref, func(message string, progress int) {
+		fmt.Printf("%s %d\n", message, progress)
+	})
 
 	if server.Exists() {
 		err := server.Remove()
@@ -189,13 +180,7 @@ func (handler WebhookHandler) HandlePullRequestEvent(event interface{}) {
 	commenter := githubCommenter{
 		prNumber: *e.PullRequest.Number,
 	}
-	server := staging.Server{
-		Branch:         *e.PullRequest.Head.Ref,
-		Repo:           *e.Repo.CloneURL,
-		Domain:         "staging.vektorprogrammet.no",
-		RootFolder:     "/var/www",
-		UpdateProgress: commenter.UpdateProgress,
-	}
+	server := staging.NewServer(*e.PullRequest.Head.Ref, commenter.UpdateProgress)
 
 	if server.Exists() {
 		if server.CanBeFastForwarded() {

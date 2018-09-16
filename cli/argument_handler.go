@@ -1,6 +1,9 @@
 package cli
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 func HandleArguments() (keepRunning bool) {
 	if len(os.Args) > 2 && os.Args[1] == "deploy-branch" {
@@ -18,5 +21,19 @@ func HandleArguments() (keepRunning bool) {
 			return false
 		}
 	}
-	return true
+
+	if len(os.Args) == 2 && (os.Args[1] == "list-servers" || os.Args[1] == "ls") {
+		servers := ListServers()
+		for i := 0; i < len(servers); i++ {
+			fmt.Printf("%s ", servers[i].Branch)
+		}
+		fmt.Printf("\n")
+	}
+
+	if len(os.Args) > 1 {
+		fmt.Printf("Unrecognized command %s\n", os.Args[1])
+		return false
+	} else {
+		return true
+	}
 }
