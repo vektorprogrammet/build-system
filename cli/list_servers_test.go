@@ -12,7 +12,7 @@ func TestListDirContents(t *testing.T) {
 
 	rm := exec.Command("sh", "-c", "rm -rf testfolder")
 	rm.Dir = "."
-	defer mkdir.Run()
+	defer rm.Run()
 
 	_, err := mkdir.Output()
 	if err == nil {
