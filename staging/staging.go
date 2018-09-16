@@ -11,10 +11,10 @@ import (
 )
 
 type Server struct {
-	Repo       string
-	Branch     string
-	RootFolder string
-	Domain     string
+	Repo           string
+	Branch         string
+	RootFolder     string
+	Domain         string
 	UpdateProgress func(message string, progress int)
 }
 
@@ -64,10 +64,27 @@ func (s *Server) Deploy() error {
 	return nil
 }
 
+func (s *Server) CanBeFastForwarded() bool {
+	c := exec.Command("sh", "-c", "git remote update")
+	c.Dir = s.folder()
+	_, err := c.Output()
+	if err != nil {
+		fmt.Printf("Could not update remotes: %s\n", err)
+		return false
+	}
+
+	c = exec.Command("sh", "-c", "git status")
+	c.Dir = s.folder()
+	output, err := c.Output()
+	if err != nil {
+		fmt.Printf("Could not execute git status: %s\n", err)
+		return false
+	}
+	return strings.Contains(string(output), "can be fast-forwarded")
+}
+
 func (s *Server) Update() error {
-	if err := s.runCommands([]string{
-		fmt.Sprintf("git pull origin %s", s.Branch),
-	}); err != nil {
+	if err := s.runCommand(fmt.Sprintf("git pull origin %s", s.Branch)); err != nil {
 		return err
 	}
 
@@ -199,7 +216,7 @@ func (s *Server) dropDatabase() error {
 }
 
 func (s *Server) Remove() error {
-	if len(s.folder()) > len(s.RootFolder) + 1 {
+	if len(s.folder()) > len(s.RootFolder)+1 {
 		defer s.runCommand("rm -rf " + s.folder())
 	}
 	if len(s.ServerName()) > 0 {
