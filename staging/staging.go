@@ -235,7 +235,7 @@ func (s *Server) install() error {
 			defer wg.Done()
 			s.runCommands([]string{
 				"npm run setup:client",
-				"npm run build:client",
+				"NODE_ENV=staging npm run build:client",
 			})
 		}(&wg)
 	}
