@@ -206,7 +206,7 @@ func (s *Server) ServerName() string {
 
 func (s *Server) install() error {
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(3)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
