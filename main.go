@@ -109,6 +109,11 @@ func startGitHubEventListener() {
 }
 
 func getServers(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	files, err := ioutil.ReadDir(staging.DefaultRootFolder)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -132,6 +137,12 @@ func getServers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(serversJson)
+}
+
+func enableCors(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
 func main() {
