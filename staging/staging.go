@@ -1,6 +1,7 @@
 package staging
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -38,6 +39,21 @@ func NewServer(branch string, updateProgress func(message string, progress int))
 	s.UpdateProgress = updateProgress
 
 	return s
+}
+
+func (s *Server) MarshalJSON() ([]byte, error) {
+	var tmp struct {
+		Repo           string `json:"repo"`
+		Branch         string `json:"branch"`
+		Domain         string `json:"domain"`
+		Url         string `json:"url"`
+	}
+	tmp.Repo = s.Repo
+	tmp.Branch = s.Branch
+	tmp.Domain = s.Domain
+	tmp.Url = "https://" + s.ServerName()
+
+	return json.Marshal(&tmp)
 }
 
 func (s *Server) Deploy() error {

@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/vektorprogrammet/build-system/cli"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -106,6 +108,32 @@ func startGitHubEventListener() {
 	}()
 }
 
+func getServers(w http.ResponseWriter, r *http.Request) {
+	files, err := ioutil.ReadDir(staging.DefaultRootFolder)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var servers []staging.Server
+	for _, f := range files {
+		if f.IsDir() {
+			servers = append(servers, staging.NewServer(f.Name(), func(message string, progress int) {}))
+		}
+	}
+
+	serversJson, err := json.Marshal(servers)
+	if err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(serversJson)
+}
+
 func main() {
 	keepRunning := cli.HandleArguments()
 	if !keepRunning {
@@ -118,6 +146,7 @@ func main() {
 	eventMonitor := GitHubEventMonitor{secret: []byte(secret)}
 
 	http.HandleFunc("/webhooks", eventMonitor.ServeHTTP)
+	http.HandleFunc("/api/servers", getServers)
 	fmt.Println("Listening to webhooks on port 5555")
 	log.Fatal(http.ListenAndServe(":5555", nil))
 }
