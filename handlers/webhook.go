@@ -20,6 +20,7 @@ type WebhookHandler struct{
 
 func (wh *WebhookHandler) InitRoutes() {
 	wh.Router.HandleFunc("/github", wh.handleWebhook)
+	wh.startGitHubEventListeners()
 }
 
 func (wh *WebhookHandler) handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +39,7 @@ func (wh *WebhookHandler) handleWebhook(w http.ResponseWriter, r *http.Request) 
 	}(event)
 }
 
-func (wh *WebhookHandler) StartGitHubEventListeners() {
+func (wh *WebhookHandler) startGitHubEventListeners() {
 	eventChan = make(chan interface{})
 	go func() {
 		for event := range eventChan {
