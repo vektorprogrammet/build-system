@@ -14,7 +14,7 @@ type Api struct {
 	Router *mux.Router
 }
 
-func (a *Api) routes() {
+func (a *Api) InitRoutes() {
 	a.Router.HandleFunc("/servers", a.handleGetServers)
 }
 

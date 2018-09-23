@@ -22,19 +22,21 @@ func main() {
 	secret := os.Getenv("GITHUB_WEBHOOKS_SECRET")
 	webhookHandler := handlers.WebhookHandler{
 		Secret: []byte(secret),
-		Router: mux.NewRouter(),
+		Router: mux.NewRouter().PathPrefix("/webhooks/").Subrouter(),
 	}
 
 	webhookHandler.StartGitHubEventListeners()
+	webhookHandler.InitRoutes()
 
 	api := handlers.Api{
-		Router: mux.NewRouter(),
+		Router: mux.NewRouter().PathPrefix("/api/").Subrouter(),
 	}
+	api.InitRoutes()
 
 	serveMux := http.NewServeMux()
 
-	serveMux.Handle("/webhooks", webhookHandler.Router)
-	serveMux.Handle("/api", api.Router)
+	serveMux.Handle("/webhooks/", webhookHandler.Router)
+	serveMux.Handle("/api/", api.Router)
 
 	handler := cors.Default().Handler(serveMux)
 

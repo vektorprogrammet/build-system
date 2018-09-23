@@ -18,8 +18,8 @@ type WebhookHandler struct{
 	Router *mux.Router
 }
 
-func (wh *WebhookHandler) routes() {
-	wh.Router.HandleFunc("/", wh.handleWebhook)
+func (wh *WebhookHandler) InitRoutes() {
+	wh.Router.HandleFunc("/github", wh.handleWebhook)
 }
 
 func (wh *WebhookHandler) handleWebhook(w http.ResponseWriter, r *http.Request) {
