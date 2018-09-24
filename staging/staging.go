@@ -206,7 +206,7 @@ func (s *Server) ServerName() string {
 
 func (s *Server) install() error {
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
@@ -228,17 +228,14 @@ func (s *Server) install() error {
 			"npm run build:scheduling",
 		})
 	}(&wg)
-
-	if s.Branch == "assistant-dashboard" {
-		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
-			defer wg.Done()
-			s.runCommands([]string{
-				"npm run setup:client",
-				"NODE_ENV=staging npm run build:client",
-			})
-		}(&wg)
-	}
+	
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		s.runCommands([]string{
+			"npm run setup:client",
+			"NODE_ENV=staging npm run build:client",
+		})
+	}(&wg)
 
 	wg.Wait()
 
