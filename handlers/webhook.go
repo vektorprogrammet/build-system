@@ -112,7 +112,7 @@ func (wh WebhookHandler) handlePullRequestEvent(event interface{}) {
 		if server.CanBeFastForwarded() {
 			server.Update()
 		}
-		commenter.Comment("Staging server updated at https://" + server.ServerName())
+		fmt.Println("Staging server updated at https://" + server.ServerName())
 	} else {
 		commenter.StartingDeploy()
 		err := server.Deploy()
