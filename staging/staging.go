@@ -43,10 +43,10 @@ func NewServer(branch string, updateProgress func(message string, progress int))
 
 func (s *Server) MarshalJSON() ([]byte, error) {
 	var tmp struct {
-		Repo           string `json:"repo"`
-		Branch         string `json:"branch"`
-		Domain         string `json:"domain"`
-		Url         string `json:"url"`
+		Repo   string `json:"repo"`
+		Branch string `json:"branch"`
+		Domain string `json:"domain"`
+		Url    string `json:"url"`
 	}
 	tmp.Repo = s.Repo
 	tmp.Branch = s.Branch
@@ -206,7 +206,7 @@ func (s *Server) ServerName() string {
 
 func (s *Server) install() error {
 	var wg sync.WaitGroup
-	wg.Add(4)
+	wg.Add(3)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
@@ -221,14 +221,6 @@ func (s *Server) install() error {
 		})
 	}(&wg)
 
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		s.runCommands([]string{
-			"npm run setup:scheduling",
-			"npm run build:scheduling",
-		})
-	}(&wg)
-	
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		s.runCommands([]string{
