@@ -160,11 +160,11 @@ func (s *Server) checkout() error {
 }
 
 func (s *Server) setFolderPermissions() error {
-	cacheDir := s.folder() + "/app/cache"
-	logsDir := s.folder() + "/app/logs"
-	imageDir := s.folder() + "/www/images"
+	cacheDir := s.folder() + "/var/cache"
+	logsDir := s.folder() + "/var/logs"
+	imageDir := s.folder() + "/web/images"
 	signatureDir := s.folder() + "/signatures"
-	mediaDir := s.folder() + "/www/media"
+	mediaDir := s.folder() + "/web/media"
 
 	return s.runCommands([]string{
 		"setfacl -R -m u:vektorprogrammet:rwX .",
@@ -176,7 +176,7 @@ func (s *Server) setFolderPermissions() error {
 
 func (s *Server) createNginxConfig() error {
 	nginxConfig := nginx.Config{
-		Root:       s.folder() + "/www",
+		Root:       s.folder() + "/web",
 		ServerName: s.ServerName(),
 	}
 
@@ -185,7 +185,7 @@ func (s *Server) createNginxConfig() error {
 
 func (s *Server) createRobotsTxt() error {
 	robotContent := "User-agent: *\nDisallow: /"
-	return s.runCommand(fmt.Sprintf("echo '%s' > %s/www/robots.txt", robotContent, s.folder()))
+	return s.runCommand(fmt.Sprintf("echo '%s' > %s/web/robots.txt", robotContent, s.folder()))
 }
 
 func (s *Server) restartNginx() error {
@@ -231,15 +231,15 @@ func (s *Server) install() error {
 
 	wg.Wait()
 
-	return s.runCommand("php app/console cache:clear --env=prod")
+	return s.runCommand("php bin/console cache:clear --env=prod")
 }
 
 func (s *Server) createDatabase() error {
 	commands := []string{
-		"php app/console doctrine:database:create --env=prod",
-		"php app/console doctrine:schema:create --env=prod",
-		"php app/console doctrine:fixtures:load -n",
-		"php app/console doctrine:migrations:version --add --all -n --env=prod",
+		"php bin/console doctrine:database:create --env=prod",
+		"php bin/console doctrine:schema:create --env=prod",
+		"php bin/console doctrine:fixtures:load -n",
+		"php bin/console doctrine:migrations:version --add --all -n --env=prod",
 	}
 
 	return s.runCommands(commands)
@@ -247,7 +247,7 @@ func (s *Server) createDatabase() error {
 
 func (s *Server) updateDatabase() error {
 
-	return s.runCommand("php app/console doctrine:migrations:migrate -n --env=prod ")
+	return s.runCommand("php bin/console doctrine:migrations:migrate -n --env=prod ")
 }
 
 func (s *Server) createParametersFile() error {
@@ -260,7 +260,7 @@ func (s *Server) createParametersFile() error {
 }
 
 func (s *Server) dropDatabase() error {
-	return s.runCommand("php app/console doctrine:database:drop --force")
+	return s.runCommand("php bin/console doctrine:database:drop --force")
 }
 
 func (s *Server) Remove() error {
