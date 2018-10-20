@@ -126,7 +126,7 @@ func (s *Server) CanBeFastForwarded() bool {
 }
 
 func (s *Server) Update() error {
-	if err := s.runCommand(fmt.Sprintf("git checkout .")); err != nil {
+	if err := s.runCommand(fmt.Sprintf("git reset --hard HEAD")); err != nil {
 		return err
 	}
 
