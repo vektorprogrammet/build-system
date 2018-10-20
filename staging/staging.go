@@ -126,7 +126,15 @@ func (s *Server) CanBeFastForwarded() bool {
 }
 
 func (s *Server) Update() error {
+	if err := s.runCommand(fmt.Sprintf("git checkout .")); err != nil {
+		return err
+	}
+
 	if err := s.runCommand(fmt.Sprintf("git pull origin %s", s.Branch)); err != nil {
+		return err
+	}
+
+	if err := s.createRobotsTxt(); err != nil {
 		return err
 	}
 
