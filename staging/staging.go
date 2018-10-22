@@ -168,17 +168,14 @@ func (s *Server) checkout() error {
 }
 
 func (s *Server) setFolderPermissions() error {
-	cacheDir := s.folder() + "/var/cache"
-	logsDir := s.folder() + "/var/logs"
-	imageDir := s.folder() + "/web/images"
-	signatureDir := s.folder() + "/signatures"
-	mediaDir := s.folder() + "/web/media"
+	varDir := s.folder() + "/var"
+	webDir := s.folder() + "/web"
 
 	return s.runCommands([]string{
 		"setfacl -R -m u:vektorprogrammet:rwX .",
 		"setfacl -dR -m u:vektorprogrammet:rwX .",
-		fmt.Sprintf("setfacl -R -m u:www-data:rwX %s %s %s %s %s", cacheDir, logsDir, imageDir, signatureDir, mediaDir),
-		fmt.Sprintf("setfacl -dR -m u:www-data:rwX %s %s %s %s %s", cacheDir, logsDir, imageDir, signatureDir, mediaDir),
+		fmt.Sprintf("setfacl -R -m u:www-data:rwX %s %s", varDir, webDir),
+		fmt.Sprintf("setfacl -dR -m u:www-data:rwX %s %s", varDir, webDir),
 	})
 }
 
@@ -218,7 +215,7 @@ func (s *Server) install() error {
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		s.runCommand("SYMFONY_ENV=prod php ./composer.phar install -n --no-dev --optimize-autoloader")
+		s.runCommand("php ./composer.phar install -n --no-dev --optimize-autoloader")
 	}(&wg)
 
 	go func(wg *sync.WaitGroup) {
@@ -233,21 +230,21 @@ func (s *Server) install() error {
 		defer wg.Done()
 		s.runCommands([]string{
 			"npm run setup:client",
-			"NODE_ENV=staging npm run build:client",
+			"npm run build:client",
 		})
 	}(&wg)
 
 	wg.Wait()
 
-	return s.runCommand("php bin/console cache:clear --env=prod")
+	return nil
 }
 
 func (s *Server) createDatabase() error {
 	commands := []string{
-		"php bin/console doctrine:database:create --env=prod",
-		"php bin/console doctrine:schema:create --env=prod",
+		"php bin/console doctrine:database:create",
+		"php bin/console doctrine:schema:create",
 		"php bin/console doctrine:fixtures:load -n",
-		"php bin/console doctrine:migrations:version --add --all -n --env=prod",
+		"php bin/console doctrine:migrations:version --add --all -n",
 	}
 
 	return s.runCommands(commands)
@@ -255,7 +252,7 @@ func (s *Server) createDatabase() error {
 
 func (s *Server) updateDatabase() error {
 
-	return s.runCommand("php bin/console doctrine:migrations:migrate -n --env=prod ")
+	return s.runCommand("php bin/console doctrine:migrations:migrate -n ")
 }
 
 func (s *Server) createParametersFile() error {

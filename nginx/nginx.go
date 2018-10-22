@@ -16,11 +16,11 @@ server {
 	root %s;
 
 	location / {
-		# try to serve file directly, fallback to app.php
-		try_files $uri /app.php$is_args$args;
+		# try to serve file directly, fallback to app_staging.php
+		try_files $uri /app_staging.php$is_args$args;
 	}
 
-	location ~ ^/app\.php(/|$) {
+	location ~ ^/app_staging\.php(/|$) {
 		fastcgi_pass unix:/var/run/php/php7.1-fpm.sock;
 		fastcgi_split_path_info ^(.+\.php)(/.*)$;
 		include fastcgi_params;
