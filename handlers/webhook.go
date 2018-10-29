@@ -69,7 +69,7 @@ func (wh *WebhookHandler) handlePushEvent(event interface{}) {
 	if server.Exists() && server.CanBeFastForwarded() {
 		server.Update()
 		fmt.Printf("Staging server updated at https://" + server.ServerName())
-		wh.Messenger.Send(fmt.Sprintf("Staging server updated at https://" + server.ServerName()))
+		wh.Messenger.Send(fmt.Sprintf("%s: Staging server updated at https://%s", branch, server.ServerName()))
 	}
 }
 
@@ -97,6 +97,8 @@ func (wh *WebhookHandler) handleBranchDeleteEvent(event interface{}) {
 		if err != nil {
 			fmt.Println("Could not remove branch")
 			wh.Messenger.Send(fmt.Sprintf("%s: Could not remove branch", branch))
+		} else {
+			wh.Messenger.Send(fmt.Sprintf("%s: Staging server deleted", branch))
 		}
 	}
 }
@@ -116,14 +118,18 @@ func (wh WebhookHandler) handlePullRequestEvent(event interface{}) {
 		PrNumber: *e.PullRequest.Number,
 	}
 	branch := *e.PullRequest.Head.Ref
-	server := staging.NewServer(branch, commenter.UpdateProgress)
+	server := staging.NewServer(branch, func(message string, progress int) {
+		fmt.Printf("%s %d\n", message, progress)
+		commenter.UpdateProgress(message, progress)
+		wh.Messenger.Send(fmt.Sprintf("%s: %s %d %%", branch, message, progress))
+	})
 
 	if server.Exists() {
 		if server.CanBeFastForwarded() {
 			server.Update()
+			fmt.Println("Staging server updated at https://" + server.ServerName())
+			wh.Messenger.Send(fmt.Sprintf("%s: Staging server updated at https://%s", branch, server.ServerName()))
 		}
-		fmt.Println("Staging server updated at https://" + server.ServerName())
-		wh.Messenger.Send(fmt.Sprintf("%s: Staging server updated at https://%s", branch, server.ServerName()))
 	} else {
 		commenter.StartingDeploy()
 		err := server.Deploy()
