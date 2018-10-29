@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"github.com/google/go-github/github"
 	"github.com/vektorprogrammet/build-system/staging"
+	"github.com/vektorprogrammet/build-system/messenger"
+	"os"
 )
 
 func DeployBranch(branchName string) error {
 	ctx := context.Background()
 	client := github.NewClient(nil)
+	slack := messenger.NewSlack(os.Getenv("SLACK_ENDPOINT"), "#staging_log", "vektorbot", ":robot_face:")
 
 	if err := EnsureBranchExists(ctx, client, branchName); err != nil {
 		return err
@@ -17,15 +20,19 @@ func DeployBranch(branchName string) error {
 
 	server := staging.NewServer(branchName, func(message string, progress int) {
 		fmt.Printf("%s %d\n", message, progress)
+		slack.Send(fmt.Sprintf("%s: %s %d %%", branchName, message, progress))
 	})
 
 	if server.Exists() {
 		fmt.Println("Server exists. Forcing update...")
+		slack.Send(fmt.Sprintf("%s: %s", branchName, "Server exists. Forcing update..."))
 		if server.CanBeFastForwarded() {
 			server.Update()
 			fmt.Println("Server updated.")
+			slack.Send(fmt.Sprintf("%s: %s", branchName, "Server updated."))
 		} else {
 			fmt.Println("Did not update: Branch is up to date with origin/master")
+			slack.Send(fmt.Sprintf("%s: %s", branchName, "Did not update: Branch is up to date with origin/master"))
 		}
 
 	} else {
@@ -33,8 +40,10 @@ func DeployBranch(branchName string) error {
 		if err != nil {
 			server.Remove()
 			fmt.Printf("Could not create staging server: %s\n", err)
+			slack.Send(fmt.Sprintf("%s: Could not create staging server: %s", branchName, err))
 		} else {
 			fmt.Printf("Staging server deployed at https://%s\n", server.ServerName())
+			slack.Send(fmt.Sprintf("%s: Staging server deployed at https://%s", branchName, server.ServerName()))
 		}
 	}
 

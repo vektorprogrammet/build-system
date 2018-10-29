@@ -11,6 +11,7 @@ import (
 	"github.com/vektorprogrammet/build-system/handlers"
 
 	"os"
+	"github.com/vektorprogrammet/build-system/messenger"
 )
 
 func main() {
@@ -20,9 +21,11 @@ func main() {
 	}
 
 	secret := os.Getenv("GITHUB_WEBHOOKS_SECRET")
+	slack := messenger.NewSlack(os.Getenv("SLACK_ENDPOINT"), "#staging_log", "vektorbot", ":robot_face:")
 	webhooks := handlers.WebhookHandler{
 		Secret: []byte(secret),
 		Router: mux.NewRouter().PathPrefix("/webhooks/").Subrouter(),
+		Messenger: slack,
 	}
 	webhooks.InitRoutes()
 

@@ -71,7 +71,7 @@ func (s *Server) Deploy() error {
 		return err
 	}
 
-	if err := s.createParametersFile(); err != nil {
+	if err := s.createSetupParametersFile(); err != nil {
 		return err
 	}
 
@@ -86,6 +86,10 @@ func (s *Server) Deploy() error {
 
 	s.UpdateProgress("Creating database", 70)
 	if err := s.createDatabase(); err != nil {
+		return err
+	}
+
+	if err := s.createParametersFile(); err != nil {
 		return err
 	}
 
@@ -255,13 +259,27 @@ func (s *Server) updateDatabase() error {
 	return s.runCommand("php bin/console doctrine:migrations:migrate -n ")
 }
 
+func (s *Server) createSetupParametersFile() error {
+	cmd := fmt.Sprintf("cp %s/parameters_during_setup.yml app/config/parameters.yml", DefaultInstallationFolder)
+	if err := s.runCommand(cmd); err != nil {
+		return err
+	}
+
+	return s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.Branch))
+}
+
 func (s *Server) createParametersFile() error {
 	cmd := fmt.Sprintf("cp %s/parameters.yml app/config/parameters.yml", DefaultInstallationFolder)
 	if err := s.runCommand(cmd); err != nil {
 		return err
 	}
 
-	return s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.Branch))
+	err := s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.Branch))
+	if err != nil {
+		return err
+	}
+
+	return s.runCommand("php ./composer.phar install -n --no-dev --optimize-autoloader")
 }
 
 func (s *Server) dropDatabase() error {
