@@ -130,6 +130,7 @@ func (wh WebhookHandler) handlePullRequestEvent(event interface{}) {
 		if err != nil {
 			fmt.Printf("Could not create staging server: %s\n", err)
 			wh.Messenger.Send(fmt.Sprintf("%s: Could not create staging server: %s", branch, err))
+			commenter.Delete()
 			server.Remove()
 		} else {
 			commenter.EditComment(commenter.ProgressCommentId, "Staging server deployed at https://"+server.ServerName())

@@ -55,6 +55,17 @@ func (g *GithubCommenter) EditComment(id int64, comment string) (*github.IssueCo
 	return issue, nil
 }
 
+func (g *GithubCommenter) DeleteComment(id int64) error {
+	client, ctx := g.createClient()
+
+	_, err := client.Issues.DeleteComment(ctx, "vektorprogrammet", "vektorprogrammet", id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g *GithubCommenter) StartingDeploy() {
 	issueComment, _ := g.Comment("Starting deploy to staging server...")
 	g.ProgressCommentId = *issueComment.ID
@@ -63,4 +74,8 @@ func (g *GithubCommenter) StartingDeploy() {
 func (g *GithubCommenter) UpdateProgress(message string, progress int) {
 	comment := fmt.Sprintf("Deploying this pull request to the staging server... %d %%\n%s", progress, message)
 	g.EditComment(g.ProgressCommentId, comment)
+}
+
+func (g *GithubCommenter) Delete() {
+	g.DeleteComment(g.ProgressCommentId)
 }
