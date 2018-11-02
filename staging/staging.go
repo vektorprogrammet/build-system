@@ -210,7 +210,7 @@ func (s *Server) folder() string {
 }
 
 func (s *Server) ServerName() string {
-	return strings.Replace(s.Branch, "_", "-", -1) + "." + s.Domain
+	return strings.Replace(strings.ToLower(s.Branch), "_", "-", -1) + "." + s.Domain
 }
 
 func (s *Server) install() error {
