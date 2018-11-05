@@ -206,11 +206,18 @@ func (s *Server) secureWithHttps() error {
 }
 
 func (s *Server) folder() string {
-	return s.RootFolder + "/" + s.Branch
+	return s.RootFolder + "/" + s.safeBranch()
 }
 
+func (s *Server) safeBranch() string {
+	b := s.Branch
+	b = strings.Replace(b, "/", "", -1)
+	b = strings.Replace(b, "_", "-", -1)
+	b = strings.ToLower(b)
+	return b
+}
 func (s *Server) ServerName() string {
-	return strings.Replace(strings.ToLower(s.Branch), "_", "-", -1) + "." + s.Domain
+	return s.safeBranch() + "." + s.Domain
 }
 
 func (s *Server) install() error {
@@ -265,7 +272,7 @@ func (s *Server) createSetupParametersFile() error {
 		return err
 	}
 
-	return s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.Branch))
+	return s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.safeBranch()))
 }
 
 func (s *Server) createParametersFile() error {
@@ -274,7 +281,7 @@ func (s *Server) createParametersFile() error {
 		return err
 	}
 
-	err := s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.Branch))
+	err := s.runCommand(fmt.Sprintf("sed -i 's/dbname/%s/g' app/config/parameters.yml", s.safeBranch()))
 	if err != nil {
 		return err
 	}
