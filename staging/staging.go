@@ -126,11 +126,12 @@ func (s *Server) CanBeFastForwarded() bool {
 		fmt.Printf("Could not execute git status: %s\n", err)
 		return false
 	}
-	return strings.Contains(string(output), "can be fast-forwarded")
+	return strings.Contains(string(output), "can be fast-forwarded") ||
+		strings.Contains(string(output), "have diverged")
 }
 
 func (s *Server) Update() error {
-	if err := s.runCommand(fmt.Sprintf("git reset --hard HEAD")); err != nil {
+	if err := s.runCommand(fmt.Sprintf("git reset --hard origin/%s", s.Branch)); err != nil {
 		return err
 	}
 
