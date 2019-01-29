@@ -241,8 +241,8 @@ func (s *Server) install() error {
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		s.runCommands([]string{
-			"npm run setup:client",
-			"npm run build:client",
+			"NODE_ENV=staging npm run setup:client",
+			"NODE_ENV=staging npm run build:client",
 		})
 	}(&wg)
 
